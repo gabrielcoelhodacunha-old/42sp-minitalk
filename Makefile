@@ -5,7 +5,7 @@ SERVER		= server/server
 CLIENT		= client/client
 MAKE_IN_PATH	= $(MAKE) -C
 MAKE_LIBFT	= $(MAKE_IN_PATH) libft
-MAKE_UTILS	= $(MAKE_IN_PATH) utils
+MAKE_UTILS	= #$(MAKE_IN_PATH) utils
 MAKE_SERVER	= $(MAKE_IN_PATH) server
 MAKE_CLIENT	= $(MAKE_IN_PATH) client
 VALGRIND	= valgrind -q --leak-check=full --show-leak-kinds=all --track-origin=yes
@@ -44,13 +44,13 @@ run_client_bonus:	$(CLIENT)
 
 clean:
 		$(MAKE_LIBFT) clean
-		$(MAKE_UTILS) clean
+		#$(MAKE_UTILS) clean
 		$(MAKE_SERVER) clean
 		$(MAKE_CLIENT) clean
 
 fclean:
 		$(MAKE_LIBFT) fclean
-		$(MAKE_UTILS) fclean
+		#$(MAKE_UTILS) fclean
 		$(MAKE_SERVER) fclean
 		$(MAKE_CLIENT) fclean
 

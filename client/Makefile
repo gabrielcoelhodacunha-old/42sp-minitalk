@@ -1,4 +1,4 @@
-NAME		= server
+NAME		= client
 BONUS		= $(NAME)_bonus
 CC		= cc
 CC_FLAGS	= -Wall -Wextra -Werror -g3
