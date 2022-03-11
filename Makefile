@@ -8,7 +8,8 @@ MAKE_LIBFT	= $(MAKE_IN_PATH) libft
 MAKE_UTILS	= #$(MAKE_IN_PATH) utils
 MAKE_SERVER	= $(MAKE_IN_PATH) server
 MAKE_CLIENT	= $(MAKE_IN_PATH) client
-VALGRIND	= valgrind -q --leak-check=full --show-leak-kinds=all --track-origin=yes
+MAKE_SERVER_RUN	= $(MAKE_SERVER) run
+MAKE_CLIENT_RUN	= $(MAKE_CLIENT) run
 
 all:		$(NAME)
 
@@ -27,20 +28,20 @@ $(CLIENT):
 $(NAME):	$(LIBFT) $(UTILS) $(SERVER) $(CLIENT)
 
 run_server:	$(SERVER)
-		$(VALGRIND) $(SERVER)
+		$(MAKE_SERVER_RUN)
 
 run_client:	$(CLIENT)
-		$(VALGRIND) $(CLIENT) $(PID) $(MESSAGE)
+		$(MAKE_CLIENT_RUN) $(PID) $(MESSAGE)
 
 bonus:		$(LIBFT) $(UTILS)
 		$(MAKE_SERVER) bonus
 		$(MAKE_CLIENT) bonus
 
 run_server_bonus:	$(SERVER)
-			$(VALGRIND) $(SERVER)_bonus
+			$(MAKE_SERVER_RUN)_bonus
 
 run_client_bonus:	$(CLIENT)
-			$(VALGRIND) $(CLIENT)_bonus $(PID) $(MESSAGE)
+			$(MAKE_CLIENT_RUN)_bonus $(PID) $(MESSAGE)
 
 clean:
 		$(MAKE_LIBFT) clean
@@ -54,6 +55,6 @@ fclean:
 		$(MAKE_SERVER) fclean
 		$(MAKE_CLIENT) fclean
 
-re:		clean all
+re:		fclean all
 
 .PHONY:	all clean fclean re run_server run_client run_server_bonus run_client_bonus

@@ -14,6 +14,7 @@ OBJECTS_BONUS	= $(SRC_BONUS:%.c=obj/%.o)
 LIBRARIES	= -L$(LIBFT_PATH) -lft #-L$(UTILS_PATH) -lutil
 MKDIR		= mkdir -p
 RM		= rm -fr
+VALGRIND	= valgrind -q --leak-check=full --show-leak-kinds=all --track-origins=yes
 VPATH		= . src obj bonus
 
 obj/%.o:	%.c
@@ -27,7 +28,13 @@ obj:
 $(NAME):	obj $(OBJECTS)
 		$(CC) $(CC_FLAGS) -o $(NAME) $(OBJECTS) $(LIBRARIES)
 
+run:		all
+		$(VALGRIND) ./$(NAME) $(PID) $(MESSAGE)
+
 bonus:		$(BONUS)
+
+run_bonus:	bonus
+		$(VALGRIND) ./$(BONUS) $(PID) $(MESSAGE)
 
 $(BONUS):	obj $(OBJECTS_BONUS)
 		$(CC) $(CC_FLAGS) -o $(BONUS) $(OBJECTS_BONUS) $(LIBRARIES)
@@ -41,4 +48,4 @@ fclean:		clean
 
 re:		fclean all
 
-.PHONY:	all clean fclean re bonus
+.PHONY:	all clean fclean re bonus run run_bonus

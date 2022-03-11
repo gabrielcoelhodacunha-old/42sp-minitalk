@@ -18,23 +18,70 @@ static void	show_pid(void)
 	ft_printf("PID : %i\n", pid);
 }
 
-static void	signal_handler(int signal_number)
+void	set_bit(char *message, size_t idx)
 {
-	if (signal_number == SIGUSR1)
-		ft_printf("0");
+	message[idx/sizeof(idx)] |= 128 >> (idx % sizeof(idx));
+}
+
+static void	signal_action(int signal_number, siginfo_t *info, void *context)
+{
+	static char	*message;
+	static size_t	idx;
+	char	*auxiliary;
+
+	if (!message)
+	{
+		message = ft_strdup(" ");
+		if (!message)
+			exit(EXIT_FAILURE);
+		idx = 0;
+	}
 	else
-		ft_printf("1");
+	{
+		auxiliary = message;
+		free(message);
+		message = ft_strjoin(auxiliary, " ");
+		if (!message)
+		{
+			free(auxiliary);
+			exit(EXIT_FAILURE);
+		}
+		free(auxiliary);
+		idx++;
+	}
+	message[idx] = '\0';
+	if (signal_number == SIGUSR2)
+		set_bit(message, idx);
+	if (kill(SIGUSR1, info->si_pid))
+	{
+		ft_printf("%s", message);
+		free(message);
+		message = NULL;
+	}
+	(void) context;
+}
+
+struct sigaction	*create_signal_action(void)
+{
+	struct sigaction	*signal_action;
+
+	signal_action = malloc(sizeof(*signal_action));
+	if (!signal_action)
+		return (NULL);
+	signal_action->sa_sigaction = signal_action;
+	signal_action->sa_flags = SA_NODEFER | SA_RESTART;
+	sigemptyset(&(signal_action->sa_mask));
+	return (signal_action);
 }
 
 static void	receive_message(void)
 {
-	struct sigaction	signal_action;
+	struct sigaction	*signal_action;
 
-	signal_action.sa_handler = signal_handler;
-	signal_action.sa_flags = 0;
-	sigemptyset(&signal_action.sa_mask);
-	sigaction(SIGUSR1, &signal_action, NULL);
-	sigaction(SIGUSR2, &signal_action, NULL);
+	signal_action = create_signal_action();
+	sigaction(SIGUSR1, signal_action, NULL);
+	sigaction(SIGUSR2, signal_action, NULL);
 	while (pause())
 		;
+	free(signal_action);
 }

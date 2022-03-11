@@ -30,9 +30,24 @@ static void	check_args(int argc, char **argv)
 
 static void	send_message(pid_t server_pid, char *message)
 {
-	ft_printf("Server PID : %i\n", server_pid);
-	ft_printf("Message : %s\n", message);
-	kill(server_pid, SIGUSR2);
-	kill(server_pid, SIGUSR1);
-	kill(server_pid, SIGUSR1);
+	char	idx;
+	int	signal_number;
+
+	while (*message)
+	{
+		ft_printf("%c : ", *message);
+		idx = 8;
+		while (--idx >= 0)
+		{
+			if (*message & (1 << idx))
+				signal_number = SIGUSR2;
+			else
+				signal_number = SIGUSR1;
+			ft_printf("%i", signal_number == SIGUSR2);
+			kill(server_pid, signal_number);
+			usleep(10);
+		}
+		ft_printf("\n");
+		message++;
+	}
 }
