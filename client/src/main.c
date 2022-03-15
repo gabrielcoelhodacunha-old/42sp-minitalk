@@ -28,11 +28,32 @@ static void	check_args(int argc, char **argv)
 	exit(EXIT_FAILURE);
 }
 
+void	signal_handler(int signal_number)
+{
+	ft_printf("%i", signal_number == SIGUSR1);
+}
+
+struct sigaction	*create_signal_action(void)
+{
+	struct sigaction	*signal_action;
+
+	signal_action = malloc(sizeof(*signal_action));
+	if (!signal_action)
+		exit(EXIT_FAILURE);
+	signal_action->sa_flags = 0 | SA_NODEFER | SA_RESTART;
+	signal_action->sa_handler = signal_handler;
+	return (signal_action);
+}
+
 static void	send_message(pid_t server_pid, char *message)
 {
 	char	idx;
 	int	signal_number;
+	struct sigaction	*signal_action;
 
+	signal_action = create_signal_action();
+	sigaction(SIGUSR1, signal_action, NULL);
+	sigaction(SIGUSR2, signal_action, NULL);
 	while (*message)
 	{
 		ft_printf("%c : ", *message);
@@ -43,11 +64,11 @@ static void	send_message(pid_t server_pid, char *message)
 				signal_number = SIGUSR2;
 			else
 				signal_number = SIGUSR1;
-			ft_printf("%i", signal_number == SIGUSR2);
 			kill(server_pid, signal_number);
-			usleep(10);
+			pause();
 		}
 		ft_printf("\n");
 		message++;
 	}
+	free(signal_action);
 }

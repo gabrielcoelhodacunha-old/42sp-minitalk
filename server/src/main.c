@@ -20,45 +20,57 @@ static void	show_pid(void)
 
 void	set_bit(char *message, size_t idx)
 {
-	message[idx/sizeof(idx)] |= 128 >> (idx % sizeof(idx));
+	size_t	midx;
+	size_t	shift;
+
+	midx = sizeof(idx) * 8;
+	shift = idx % midx;
+	midx = idx / midx;
+	message[midx] |= 128 >> shift;
 }
 
-static void	signal_action(int signal_number, siginfo_t *info, void *context)
+void	signal_handler(int signal_number, siginfo_t *info, void *context)
 {
+/*
 	static char	*message;
 	static size_t	idx;
 	char	*auxiliary;
 
+	(void) context;
 	if (!message)
 	{
-		message = ft_strdup(" ");
+		message = ft_strdup("");
 		if (!message)
 			exit(EXIT_FAILURE);
-		idx = 0;
 	}
-	else
+	if (!(idx % 8))
 	{
 		auxiliary = message;
 		free(message);
 		message = ft_strjoin(auxiliary, " ");
-		if (!message)
-		{
-			free(auxiliary);
-			exit(EXIT_FAILURE);
-		}
 		free(auxiliary);
-		idx++;
+		if (!message)
+			exit(EXIT_FAILURE);
+		message[ft_strlen(message) - 1] = '\0';
 	}
-	message[idx] = '\0';
 	if (signal_number == SIGUSR2)
 		set_bit(message, idx);
 	if (kill(SIGUSR1, info->si_pid))
 	{
-		ft_printf("%s", message);
+		ft_printf("Client PID : %i\n", info->si_pid);
+		ft_printf("%s\n", message);
 		free(message);
 		message = NULL;
+		idx = 0;
 	}
+	idx++;
+*/
 	(void) context;
+	ft_printf("Client PID : %i\n", info->si_pid);
+	if (signal_number == SIGUSR1)
+		kill(info->si_pid, SIGUSR2);
+	else
+		kill(info->si_pid, SIGUSR1);
 }
 
 struct sigaction	*create_signal_action(void)
@@ -67,10 +79,9 @@ struct sigaction	*create_signal_action(void)
 
 	signal_action = malloc(sizeof(*signal_action));
 	if (!signal_action)
-		return (NULL);
-	signal_action->sa_sigaction = signal_action;
-	signal_action->sa_flags = SA_NODEFER | SA_RESTART;
-	sigemptyset(&(signal_action->sa_mask));
+		exit(EXIT_FAILURE);
+	signal_action->sa_flags = SA_SIGINFO;
+	signal_action->sa_sigaction = signal_handler;
 	return (signal_action);
 }
 
