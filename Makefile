@@ -1,60 +1,55 @@
 NAME		= minitalk
-LIBFT		= libft/libft.a
-UTILS		= utils/libutils.a
-SERVER		= server/server
-CLIENT		= client/client
+SERVER		= server
+CLIENT		= client
 MAKE_IN_PATH	= $(MAKE) -C
 MAKE_LIBFT	= $(MAKE_IN_PATH) libft
-MAKE_UTILS	= #$(MAKE_IN_PATH) utils
-MAKE_SERVER	= $(MAKE_IN_PATH) server
-MAKE_CLIENT	= $(MAKE_IN_PATH) client
-MAKE_SERVER_RUN	= $(MAKE_SERVER) run
-MAKE_CLIENT_RUN	= $(MAKE_CLIENT) run
+LIBFT		= libft/libft.a
+SERVER_SRC	= server.c
+CLIENT_SRC	= client.c
+SERVER_OBJECTS	= $(SERVER_SRC:%.c=obj/%.o)
+CLIENT_OBJECTS	= $(CLIENT_SRC:%.c=obj/%.o)
+INCLUDES	= -Iinclude -Ilibft/include
+LIBRARIES	= -Llibft -lft
+CC		= cc
+CC_FLAGS	= -Wall -Wextra -Werror -g3
+MKDIR		= mkdir -p
+RM		= rm -fr
+VALGRIND	= valgrind -q --leak-check=full --show-leak-kinds=all --track-origins=yes
+VPATH		= . src obj
+
+obj/%.o:	%.c
+		$(CC) $(CC_FLAGS) $(INCLUDES) -c $< -o $@
 
 all:		$(NAME)
 
 $(LIBFT):
 		$(MAKE_LIBFT) printf
 
-$(UTILS):
-		$(MAKE_UTILS)
+obj:
+		$(MKDIR) obj
 
-$(SERVER):
-		$(MAKE_SERVER)
+$(SERVER):	obj $(SERVER_OBJECTS)
+		$(CC) $(CC_FLAGS) -o $(SERVER) $(SERVER_OBJECTS) $(LIBRARIES)
 
-$(CLIENT):
-		$(MAKE_CLIENT)
+$(CLIENT):	obj $(CLIENT_OBJECTS)
+		$(CC) $(CC_FLAGS) -o $(CLIENT) $(CLIENT_OBJECTS) $(LIBRARIES)
 
-$(NAME):	$(LIBFT) $(UTILS) $(SERVER) $(CLIENT)
+$(NAME):	$(LIBFT) $(SERVER) $(CLIENT)
 
 run_server:	$(SERVER)
-		$(MAKE_SERVER_RUN)
+		$(VALGRIND) $(SERVER)
 
 run_client:	$(CLIENT)
-		$(MAKE_CLIENT_RUN) $(PID) $(MESSAGE)
-
-bonus:		$(LIBFT) $(UTILS)
-		$(MAKE_SERVER) bonus
-		$(MAKE_CLIENT) bonus
-
-run_server_bonus:	$(SERVER)
-			$(MAKE_SERVER_RUN)_bonus
-
-run_client_bonus:	$(CLIENT)
-			$(MAKE_CLIENT_RUN)_bonus $(PID) $(MESSAGE)
+		$(VALGRIND) $(CLIENT) $(PID) $(MESSAGE)
 
 clean:
 		$(MAKE_LIBFT) clean
-		#$(MAKE_UTILS) clean
-		$(MAKE_SERVER) clean
-		$(MAKE_CLIENT) clean
+		$(RM) obj
 
-fclean:
+fclean:		clean
 		$(MAKE_LIBFT) fclean
-		#$(MAKE_UTILS) fclean
-		$(MAKE_SERVER) fclean
-		$(MAKE_CLIENT) fclean
+		$(RM) $(SERVER) $(CLIENT)
 
 re:		fclean all
 
-.PHONY:	all clean fclean re run_server run_client run_server_bonus run_client_bonus
+.PHONY:	all clean fclean re run_server run_client

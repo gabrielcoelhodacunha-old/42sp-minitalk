@@ -20,6 +20,7 @@ void	show_pid(void)
 void	receive_signal(int signal_number, pid_t client_pid)
 {
 	(void) client_pid;
+	(void) signal_number;
 }
 
 void	handle_sigusr(int signal_number, siginfo_t *info, void *context)

@@ -33,12 +33,14 @@ void	check_args(int argc, char **argv)
 
 void	handle_sigusr(int signal_number)
 {
+	(void) signal_number;
 }
 
 void	send_message(pid_t server_pid, char *message)
 {
 	struct sigaction	signal_action;
 
+	(void) server_pid;
 	if (!message)
 		exit(EXIT_FAILURE);
 	signal_action.sa_flags = 0;
