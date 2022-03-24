@@ -17,10 +17,33 @@ void	show_pid(void)
 	ft_printf("PID : %i\n", getpid());
 }
 
+#define MESSAGE_SIZE 1000000
+
 void	receive_signal(int signal_number, pid_t client_pid)
 {
-	(void) client_pid;
-	(void) signal_number;
+	static int	bit = -1;
+	static int	idx;
+	static unsigned char	message[MESSAGE_SIZE];
+
+	bit++;
+	if (signal_number == SIGUSR2)
+		message[idx] |= 128 >> bit;
+	if (idx == MESSAGE_SIZE || (bit == 7 && !message[idx]))
+	{
+		write(STDOUT_FILENO, message, idx);
+		write(STDOUT_FILENO, "\n", 1);
+		ft_bzero(message, idx);
+		bit = -1;
+		idx = 0;
+		kill(client_pid, SIGUSR2);
+		return ;
+	}
+	else if (bit == 7)
+	{
+		bit = -1;
+		idx++;
+	}
+	kill(client_pid, SIGUSR1);
 }
 
 void	handle_sigusr(int signal_number, siginfo_t *info, void *context)
