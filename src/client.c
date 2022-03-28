@@ -1,27 +1,22 @@
 #include "client.h"
 
-void	check_args(int argc, char **argv);
+void	check_args(int argc);
 void	handle_sigusr(int signal_number);
-void	send_message(pid_t server_pid, char *message);
+void	send_message(pid_t server_pid, unsigned char *message);
+
+volatile static int	g_confirmation_signal = 0;
 
 int	main(int argc, char **argv)
 {
-	pid_t	server_pid;
-	char	*message;
-
-	check_args(argc, argv);
-	server_pid = ft_atoi(argv[1]);
-	message = ft_strdup(argv[2]);
-	send_message(server_pid, message);
-	free(message);
+	check_args(argc);
+	send_message(ft_atoi(argv[1]), (unsigned char *) argv[2]);
 	exit(EXIT_SUCCESS);
 }
 
-void	check_args(int argc, char **argv)
+void	check_args(int argc)
 {
 	char	*message;
 
-	(void) argv;
 	if (argc == 3)
 		return ;
 	if (argc < 3)
@@ -32,44 +27,50 @@ void	check_args(int argc, char **argv)
 	exit(EXIT_FAILURE);
 }
 
-void	send_char(pid_t server_pid, char **message)
+void	send_signal(pid_t server_pid, unsigned char c, int bit)
 {
-	static int	bit = 8;
-	unsigned char	c;
 	int	signal_number;
 
-	c = **message;
-	bit--;
 	if (c & (1 << bit))
 		signal_number = SIGUSR2;
 	else
 		signal_number = SIGUSR1;
-	if (!bit)
-	{
-		bit = 8;
-		(*message)++;
-	}
 	kill(server_pid, signal_number);
 }
 
 void	handle_sigusr(int signal_number)
 {
-	if (signal_number == SIGUSR2)
-	{
-		ft_printf("Message received!\n");
-		exit(EXIT_SUCCESS);
-	}
+	g_confirmation_signal = signal_number;
 }
 
-void	send_message(pid_t server_pid, char *message)
+#define	USLEEP_TIME 100
+
+void	send_message(pid_t server_pid, unsigned char *message)
 {
-	if (!message)
-		exit(EXIT_FAILURE);
+	int	bit;
+
 	signal(SIGUSR1, handle_sigusr);
 	signal(SIGUSR2, handle_sigusr);
-	while (1)
+	bit = 8;
+	while (*message)
 	{
-		send_char(server_pid, &message);
-		pause();
+		bit--;
+		g_confirmation_signal = 0;
+		while (!g_confirmation_signal)
+		{
+			send_signal(server_pid, *message, bit);
+			usleep(USLEEP_TIME);
+		}
+		if (!bit)
+		{
+			bit = 8;
+			message++;
+		}
 	}
+	while (g_confirmation_signal != SIGUSR2)
+	{
+		kill(server_pid, SIGUSR1);
+		usleep(USLEEP_TIME);
+	}
+	ft_printf("Message received!\n");
 }
