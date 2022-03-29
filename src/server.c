@@ -1,8 +1,22 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   server.c                                           :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: gcoelho- <gcoelho-@student.42sp.org.br>    +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2022/03/29 18:44:19 by gcoelho-          #+#    #+#             */
+/*   Updated: 2022/03/29 20:16:10 by gcoelho-         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 #include "server.h"
 
-void	show_pid(void);
-void	handle_sigusr(int signal_number, siginfo_t *info, void *context);
-void	receive_message(void);
+static void	show_pid(void);
+static void	receive_message(void);
+static void	handle_sigusr(int signal_number, siginfo_t *info, void *context);
+static void	build_message(int signal_number, pid_t client_pid,
+				t_message *message);
 
 int	main(void)
 {
@@ -11,66 +25,68 @@ int	main(void)
 	exit(EXIT_SUCCESS);
 }
 
-void	show_pid(void)
+static void	show_pid(void)
 {
 	ft_printf("PID : %i\n", getpid());
 }
 
-#define MESSAGE_SIZE 1000001
-
-void	build_and_show_message(int signal_number, pid_t client_pid)
+static void	receive_message(void)
 {
-	static unsigned char	message[MESSAGE_SIZE];
-	static int	idx = 0;
-	static int	bit = -1;
-	static int	l_signal_number;
+	struct sigaction	signal_action;
+	t_message			message;
+
+	signal_action.sa_flags = SA_SIGINFO;
+	signal_action.sa_sigaction = handle_sigusr;
+	sigemptyset(&signal_action.sa_mask);
+	sigaction(SIGUSR1, &signal_action, NULL);
+	sigaction(SIGUSR2, &signal_action, NULL);
+	ft_bzero(&message, sizeof(message));
+	message.bit = -1;
+	while (1)
+	{
+		pause();
+		build_message(0, 0, &message);
+		if (message.is_complete)
+		{
+			write(STDOUT_FILENO, message.content, message.idx);
+			write(STDOUT_FILENO, "\n", 1);
+			ft_bzero(&message, sizeof(message));
+			message.bit = -1;
+		}
+	}
+}
+
+static void	handle_sigusr(int signal_number, siginfo_t *info, void *context)
+{
+	(void) context;
+	build_message(signal_number, info->si_pid, NULL);
+}
+
+static void	build_message(int signal_number, pid_t client_pid,
+				t_message *message)
+{
+	static int		l_signal_number;
 	static pid_t	l_client_pid;
 
-	if (signal_number && client_pid)
+	if (!message)
 	{
 		l_signal_number = signal_number;
 		l_client_pid = client_pid;
 		return ;
 	}
-	bit++;
+	message->bit++;
 	if (l_signal_number == SIGUSR2)
-		message[idx] |= 128 >> bit;
-	if (idx == MESSAGE_SIZE - 1 || (bit == 7 && !message[idx]))
+		message->content[message->idx] |= 128 >> message->bit;
+	if (message->idx == MESSAGE_SIZE - 1
+		|| (message->bit == 7 && !message->content[message->idx]))
+		message->is_complete = 1;
+	else if (message->bit == 7)
 	{
-		write(STDOUT_FILENO, message, idx);
-		write(STDOUT_FILENO, "\n", 1);
-		ft_bzero(message, idx + 1);
-		idx = 0;
-		bit = -1;
+		message->bit = -1;
+		message->idx++;
+	}
+	if (message->is_complete)
 		kill(l_client_pid, SIGUSR2);
-		return ;
-	}
-	else if (bit == 7)
-	{
-		bit = -1;
-		idx++;
-	}
-	kill(l_client_pid, SIGUSR1);
-}
-
-void	handle_sigusr(int signal_number, siginfo_t *info, void *context)
-{
-	(void) context;
-	build_and_show_message(signal_number, info->si_pid);
-}
-
-void	receive_message(void)
-{
-	struct sigaction	signal_action;
-
-	sigemptyset(&signal_action.sa_mask);
-	signal_action.sa_flags = SA_SIGINFO | SA_NODEFER;
-	signal_action.sa_sigaction = handle_sigusr;
-	sigaction(SIGUSR1, &signal_action, NULL);
-	sigaction(SIGUSR2, &signal_action, NULL);
-	while (1)
-	{
-		pause();
-		build_and_show_message(0, 0);
-	}
+	else
+		kill(l_client_pid, SIGUSR1);
 }
