@@ -6,7 +6,7 @@
 /*   By: gcoelho- <gcoelho-@student.42sp.org.br>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/03/29 18:44:19 by gcoelho-          #+#    #+#             */
-/*   Updated: 2022/03/30 16:52:03 by gcoelho-         ###   ########.fr       */
+/*   Updated: 2022/03/30 21:11:19 by gcoelho-         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,9 +15,7 @@
 static void	check_args(int argc);
 static void	send_message(pid_t server_pid, unsigned char *message);
 static void	handle_sigusr(int signal_number);
-static void	send_signal_and_sleep(pid_t server_pid, unsigned char c, int bit);
-
-static volatile int	g_received_confirmation = 0;
+static void	send_signal(pid_t server_pid, unsigned char *message);
 
 int	main(int argc, char **argv)
 {
@@ -43,25 +41,11 @@ static void	check_args(int argc)
 
 static void	send_message(pid_t server_pid, unsigned char *message)
 {
-	int	bit;
-
 	signal(SIGUSR1, handle_sigusr);
 	signal(SIGUSR2, handle_sigusr);
-	bit = 8;
-	while (*message)
-	{
-		bit--;
-		g_received_confirmation = 0;
-		while (!g_received_confirmation)
-			send_signal_and_sleep(server_pid, *message, bit);
-		if (!bit)
-		{
-			bit = 8;
-			message++;
-		}
-	}
+	send_signal(server_pid, message);
 	while (1)
-		send_signal_and_sleep(server_pid, '\0', 0);
+		pause();
 }
 
 static void	handle_sigusr(int signal_number)
@@ -71,17 +55,31 @@ static void	handle_sigusr(int signal_number)
 		ft_printf("Message received!\n");
 		exit(EXIT_SUCCESS);
 	}
-	g_received_confirmation = 1;
+	send_signal(0, NULL);
 }
 
-static void	send_signal_and_sleep(pid_t server_pid, unsigned char c, int bit)
+static void	send_signal(pid_t server_pid, unsigned char *message)
 {
-	int	signal_number;
+	static pid_t			l_server_pid;
+	static unsigned char	*l_message;
+	static int				bit = 8;
+	int						signal_number;
 
-	if (c & (1 << bit))
+	if (server_pid && message)
+	{
+		l_server_pid = server_pid;
+		l_message = message;
+		return (send_signal(0, NULL));
+	}
+	bit--;
+	if (*l_message & (1 << bit))
 		signal_number = SIGUSR2;
 	else
 		signal_number = SIGUSR1;
-	kill(server_pid, signal_number);
-	usleep(MICROSECONDS_TO_SLEEP);
+	if (!bit)
+	{
+		bit = 8;
+		l_message++;
+	}
+	kill(l_server_pid, signal_number);
 }

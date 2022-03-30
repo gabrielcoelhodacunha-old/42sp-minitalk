@@ -6,7 +6,7 @@
 /*   By: gcoelho- <gcoelho-@student.42sp.org.br>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/03/29 18:44:19 by gcoelho-          #+#    #+#             */
-/*   Updated: 2022/03/30 16:34:45 by gcoelho-         ###   ########.fr       */
+/*   Updated: 2022/03/30 20:38:30 by gcoelho-         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,7 +16,7 @@ static void	show_pid(void);
 static void	receive_message(void);
 static void	handle_sigusr(int signal_number, siginfo_t *info, void *context);
 static void	build_message_and_send_confirmation(int signal_number,
-				pid_t client_pid, t_message *message);
+				pid_t client_pid);
 
 int	main(void)
 {
@@ -33,60 +33,48 @@ static void	show_pid(void)
 static void	receive_message(void)
 {
 	struct sigaction	signal_action;
-	t_message			message;
 
 	ft_bzero(&signal_action, sizeof(signal_action));
-	signal_action.sa_flags = SA_SIGINFO | SA_RESTART;
+	signal_action.sa_flags = SA_SIGINFO;
 	signal_action.sa_sigaction = handle_sigusr;
 	sigaction(SIGUSR1, &signal_action, NULL);
 	sigaction(SIGUSR2, &signal_action, NULL);
-	ft_bzero(&message, sizeof(message));
-	message.bit = -1;
+	build_message_and_send_confirmation(0, 0);
 	while (1)
-	{
 		pause();
-		build_message_and_send_confirmation(0, 0, &message);
-		if (message.is_complete)
-		{
-			write(STDOUT_FILENO, message.content, message.idx);
-			write(STDOUT_FILENO, "\n", 1);
-			ft_bzero(&message, sizeof(message));
-			message.bit = -1;
-		}
-	}
 }
 
 static void	handle_sigusr(int signal_number, siginfo_t *info, void *context)
 {
 	(void) context;
-	build_message_and_send_confirmation(signal_number, info->si_pid, NULL);
+	build_message_and_send_confirmation(signal_number, info->si_pid);
 }
 
 static void	build_message_and_send_confirmation(int signal_number,
-				pid_t client_pid, t_message *message)
+				pid_t client_pid)
 {
-	static int		l_signal_number;
-	static pid_t	l_client_pid;
+	static t_message	message;
 
-	if (!message)
+	if (!signal_number && !client_pid)
 	{
-		l_signal_number = signal_number;
-		l_client_pid = client_pid;
+		ft_bzero(&message, sizeof(message));
+		message.bit = -1;
 		return ;
 	}
-	message->bit++;
-	if (l_signal_number == SIGUSR2)
-		message->content[message->idx] |= 128 >> message->bit;
-	if (message->idx == MESSAGE_SIZE - 1
-		|| (message->bit == 7 && !message->content[message->idx]))
-		message->is_complete = 1;
-	else if (message->bit == 7)
+	message.bit++;
+	if (signal_number == SIGUSR2)
+		message.content[message.idx] |= 128 >> message.bit;
+	if (message.bit == 7 && message.content[message.idx])
 	{
-		message->bit = -1;
-		message->idx++;
+		message.bit = -1;
+		message.idx++;
 	}
-	if (message->is_complete)
-		kill(l_client_pid, SIGUSR2);
-	else
-		kill(l_client_pid, SIGUSR1);
+	else if (message.bit == 7)
+	{
+		ft_printf("%s\n", message.content);
+		build_message_and_send_confirmation(0, 0);
+		kill(client_pid, SIGUSR2);
+		return ;
+	}
+	kill(client_pid, SIGUSR1);
 }
