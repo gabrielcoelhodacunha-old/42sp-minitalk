@@ -6,7 +6,7 @@
 /*   By: gcoelho- <gcoelho-@student.42sp.org.br>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/03/29 18:44:19 by gcoelho-          #+#    #+#             */
-/*   Updated: 2022/03/29 20:16:10 by gcoelho-         ###   ########.fr       */
+/*   Updated: 2022/03/30 16:34:45 by gcoelho-         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,8 +15,8 @@
 static void	show_pid(void);
 static void	receive_message(void);
 static void	handle_sigusr(int signal_number, siginfo_t *info, void *context);
-static void	build_message(int signal_number, pid_t client_pid,
-				t_message *message);
+static void	build_message_and_send_confirmation(int signal_number,
+				pid_t client_pid, t_message *message);
 
 int	main(void)
 {
@@ -35,9 +35,9 @@ static void	receive_message(void)
 	struct sigaction	signal_action;
 	t_message			message;
 
-	signal_action.sa_flags = SA_SIGINFO;
+	ft_bzero(&signal_action, sizeof(signal_action));
+	signal_action.sa_flags = SA_SIGINFO | SA_RESTART;
 	signal_action.sa_sigaction = handle_sigusr;
-	sigemptyset(&signal_action.sa_mask);
 	sigaction(SIGUSR1, &signal_action, NULL);
 	sigaction(SIGUSR2, &signal_action, NULL);
 	ft_bzero(&message, sizeof(message));
@@ -45,7 +45,7 @@ static void	receive_message(void)
 	while (1)
 	{
 		pause();
-		build_message(0, 0, &message);
+		build_message_and_send_confirmation(0, 0, &message);
 		if (message.is_complete)
 		{
 			write(STDOUT_FILENO, message.content, message.idx);
@@ -59,11 +59,11 @@ static void	receive_message(void)
 static void	handle_sigusr(int signal_number, siginfo_t *info, void *context)
 {
 	(void) context;
-	build_message(signal_number, info->si_pid, NULL);
+	build_message_and_send_confirmation(signal_number, info->si_pid, NULL);
 }
 
-static void	build_message(int signal_number, pid_t client_pid,
-				t_message *message)
+static void	build_message_and_send_confirmation(int signal_number,
+				pid_t client_pid, t_message *message)
 {
 	static int		l_signal_number;
 	static pid_t	l_client_pid;

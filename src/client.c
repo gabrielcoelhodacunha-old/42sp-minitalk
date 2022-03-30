@@ -6,7 +6,7 @@
 /*   By: gcoelho- <gcoelho-@student.42sp.org.br>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/03/29 18:44:19 by gcoelho-          #+#    #+#             */
-/*   Updated: 2022/03/29 18:44:19 by gcoelho-         ###   ########.fr       */
+/*   Updated: 2022/03/30 16:27:03 by gcoelho-         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,9 +15,9 @@
 static void	check_args(int argc);
 static void	send_message(pid_t server_pid, unsigned char *message);
 static void	handle_sigusr(int signal_number);
-static void	send_signal(pid_t server_pid, unsigned char c, int bit);
+static void	send_signal_and_sleep(pid_t server_pid, unsigned char c, int bit);
 
-static volatile int	g_confirmation_signal = 0;
+static volatile int	g_received_confirmation = 0;
 
 int	main(int argc, char **argv)
 {
@@ -34,8 +34,8 @@ static void	check_args(int argc)
 	{
 		ft_printf("Error :\n");
 		ft_printf("\tClient must be executed with 2 arguments.\n");
-		ft_printf("\tExample : ./client 1 'Hellow world!'\n");
-		ft_printf("\tIn this case, `1` is the server process id");
+		ft_printf("\tExample : ./client 1000 'Hellow world!'\n");
+		ft_printf("\tIn this case, `1000` is the server process id");
 		ft_printf(" and `Hello world!` is the message to be sent.\n");
 	}
 	exit(EXIT_FAILURE);
@@ -51,27 +51,30 @@ static void	send_message(pid_t server_pid, unsigned char *message)
 	while (*message)
 	{
 		bit--;
-		g_confirmation_signal = 0;
-		while (!g_confirmation_signal)
-			send_signal(server_pid, *message, bit);
+		g_received_confirmation = 0;
+		while (!g_received_confirmation)
+			send_signal_and_sleep(server_pid, *message, bit);
 		if (!bit)
 		{
 			bit = 8;
 			message++;
 		}
 	}
-	while (g_confirmation_signal != SIGUSR2)
-		send_signal(server_pid, '\0', 0);
+	while (1)
+		send_signal_and_sleep(server_pid, '\0', 0);
 }
 
 static void	handle_sigusr(int signal_number)
 {
 	if (signal_number == SIGUSR2)
+	{
 		ft_printf("Message received!\n");
-	g_confirmation_signal = signal_number;
+		exit(EXIT_SUCCESS);
+	}
+	g_received_confirmation = 1;
 }
 
-static void	send_signal(pid_t server_pid, unsigned char c, int bit)
+static void	send_signal_and_sleep(pid_t server_pid, unsigned char c, int bit)
 {
 	int	signal_number;
 
@@ -80,5 +83,5 @@ static void	send_signal(pid_t server_pid, unsigned char c, int bit)
 	else
 		signal_number = SIGUSR1;
 	kill(server_pid, signal_number);
-	usleep(MICROSECONDS);
+	usleep(MICROSECONDS_TO_SLEEP);
 }
